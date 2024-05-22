@@ -1,17 +1,21 @@
 package com.example.musicplayer;
 
+import android.Manifest;
 import android.content.ContentResolver;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
-import android.widget.AdapterView;
 import android.widget.ListView;
+import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,14 +34,16 @@ public class MusicListActivity extends AppCompatActivity {
         musicListView = findViewById(R.id.music_list_view);
         musicItems = new ArrayList<>();
 
-        // 권한 요청
-        ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.READ_EXTERNAL_STORAGE}, REQUEST_PERMISSION);
+        // 권한 상태 확인 및 요청
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, REQUEST_PERMISSION);
+        } else {
+            addDynamicMusicItems();
+        }
 
         // 정적으로 MP3 파일 정보 추가
         addStaticMusicItems();
-
-        // 동적으로 MP3 파일 정보 추가
-        addDynamicMusicItems();
 
         MusicListAdapter adapter = new MusicListAdapter(this, musicItems);
         musicListView.setAdapter(adapter);
@@ -49,8 +55,23 @@ public class MusicListActivity extends AppCompatActivity {
             intent.putExtra("artist", selectedMusicItem.getArtist());
             intent.putExtra("duration", selectedMusicItem.getDuration());
             intent.putExtra("resId", selectedMusicItem.getResId());
+            intent.putExtra("dataPath", selectedMusicItem.getDataPath());
             startActivity(intent);
         });
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQUEST_PERMISSION) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // 동적으로 MP3 파일 정보 추가
+                addDynamicMusicItems();
+                Toast.makeText(this, "Permission granted", Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this, "Permission denied", Toast.LENGTH_SHORT).show();
+            }
+        }
     }
 
     private void addStaticMusicItems() {
